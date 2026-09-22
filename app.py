@@ -6,9 +6,7 @@ import nltk
 from nltk.corpus import stopwords
 from nltk.stem import PorterStemmer
 
-# --------------------------------
 # Download stopwords
-# --------------------------------
 nltk.download("stopwords")
 
 # --------------------------------
@@ -31,7 +29,6 @@ stop_words = set(stopwords.words("english"))
 
 def preprocess_text(text):
 
-    # Convert to lowercase
     text = text.lower()
 
     # Remove URLs
@@ -49,7 +46,7 @@ def preprocess_text(text):
     # Tokenization
     words = text.split()
 
-    # Remove stopwords and stemming
+    # Stopwords + stemming
     words = [
         ps.stem(word)
         for word in words
@@ -62,88 +59,42 @@ def preprocess_text(text):
 # --------------------------------
 # Home Page
 # --------------------------------
-@app.route("/", methods=["GET", "POST"])
+@app.route("/")
 def home():
+    return render_template("index.html")
 
-    if request.method == "GET":
-        return render_template("index.html")
 
-    # --------------------------------
-    # Get News
-    # --------------------------------
+# --------------------------------
+# Prediction
+# --------------------------------
+@app.route("/", methods=["POST"])
+def predict():
+
     news = request.form["news"]
 
-    # --------------------------------
-    # Preprocess News
-    # --------------------------------
+    # Preprocess news
     cleaned_news = preprocess_text(news)
 
-    # --------------------------------
-    # Convert Text into TF-IDF Vector
-    # --------------------------------
+    # TF-IDF
     vector = tfidf.transform([cleaned_news]).toarray()
 
-    # --------------------------------
-    # Make Prediction
-    # --------------------------------
+    # Prediction
     prediction = model.predict(vector)
 
-    # --------------------------------
     # Confidence
-    # --------------------------------
     confidence = None
-    probabilities = None
 
     if hasattr(model, "predict_proba"):
         probabilities = model.predict_proba(vector)[0]
         confidence = round(max(probabilities) * 100, 2)
 
-    # --------------------------------
-    # Debug Information
-    # --------------------------------
-    print("=" * 60)
-
-    print("Original News:")
-    print(news)
-
-    print()
-
-    print("Cleaned News:")
-    print(cleaned_news)
-
-    print()
-
-    print("Model Classes:")
-    if hasattr(model, "classes_"):
-        print(model.classes_)
-
-    print()
-
-    print("Prediction:")
-    print(prediction[0])
-
-    if probabilities is not None:
-        print()
-
-        print("Prediction Probabilities:")
-        print(probabilities)
-
-    print("=" * 60)
-
-    # --------------------------------
     # Label Mapping
-    #
-    # 0 = Real News
-    # 1 = Fake News
-    # --------------------------------
     if prediction[0] == 0:
         result = "✅ Real News"
     else:
         result = "❌ Fake News"
 
-    # --------------------------------
-    # Send Result to HTML
-    # --------------------------------
+    # Return result
     return render_template(
         "index.html",
         prediction=result,
